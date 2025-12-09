@@ -1,0 +1,10 @@
+streamlit
+pandas
+nltk
+Sastrawi
+wordcloud
+matplotlib
+scikit-learn
+imbalanced-learn
+joblib
+seaborn
