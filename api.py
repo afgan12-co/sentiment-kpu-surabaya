@@ -11,11 +11,17 @@ Dokumentasi:
 
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List
+from datetime import datetime
 import pandas as pd
 import joblib
 from utils import preprocess_text, lexicon_label
+from dashboard_utils import (
+    detect_category, save_analysis_result, 
+    load_analysis_results, aggregate_statistics
+)
 import io
 import os
 
@@ -160,7 +166,8 @@ def health_check():
             "naive_bayes": MODELS['nb_model'] is not None,
             "svm": MODELS['svm_model'] is not None,
             "tfidf_vectorizer": MODELS['vectorizer'] is not None
-        }
+        },
+        "timestamp": datetime.now().isoformat() + 'Z'
     }
 
 # ============= PREPROCESSING ENDPOINTS =============
@@ -538,15 +545,137 @@ async def upload_dataset(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload error: {str(e)}")
 
+# ============= DASHBOARD ENDPOINTS =============
+
+@app.get("/statistics", tags=["Dashboard"])
+def get_statistics():
+    """
+    **ENDPOINT UTAMA UNTUK DASHBOARD**
+    
+    Mengembalikan semua statistik untuk KPU Admin Dashboard
+    """
+    try:
+        results = load_analysis_results()
+        stats = aggregate_statistics(results)
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Statistics error: {str(e)}")
+
+@app.post("/predict", tags=["Dashboard"])
+def predict_single(text: str, model: str = "nb"):
+    """Prediksi sentiment untuk single text dengan auto-save"""
+    if model not in ['nb', 'svm']:
+        raise HTTPException(status_code=400, detail="Model harus 'nb' atau 'svm'")
+    
+    selected_model = MODELS['nb_model'] if model == 'nb' else MODELS['svm_model']
+    if selected_model is None or MODELS['vectorizer'] is None:
+        raise HTTPException(status_code=503, detail=f"Model {model.upper()} belum tersedia")
+    
+    try:
+        cleaned = preprocess_text(text)
+        
+        if not cleaned.strip():
+            sentiment, confidence, category = 'neutral', 0.0, 'kinerja'
+        else:
+            X = MODELS['vectorizer'].transform([cleaned])
+            prediction = selected_model.predict(X)[0]
+            
+            if model == 'nb':
+                probabilities = selected_model.predict_proba(X)[0]
+                confidence = float(max(probabilities))
+            else:
+                decision = selected_model.decision_function(X)
+                confidence = float(max(abs(decision[0]))) if hasattr(decision, '__iter__') else float(abs(decision))
+            
+            sentiment_map = {'positif': 'positive', 'negatif': 'negative', 'netral': 'neutral'}
+            sentiment = sentiment_map.get(prediction.lower(), prediction.lower())
+            category = detect_category(cleaned)
+        
+        result = {
+            "text": text,
+            "cleaned_text": cleaned,
+            "sentiment": sentiment,
+            "confidence": round(confidence, 4),
+            "category": category
+        }
+        
+        save_analysis_result(result)
+        
+        return {
+            **result,
+            "timestamp": datetime.now().isoformat() + 'Z'
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+
+@app.post("/predict-batch", tags=["Dashboard"])
+def predict_batch(texts: List[str], model: str = "nb"):
+    """Batch prediction dengan auto-save"""
+    if model not in ['nb', 'svm']:
+        raise HTTPException(status_code=400, detail="Model harus 'nb' atau 'svm'")
+    
+    selected_model = MODELS['nb_model'] if model == 'nb' else MODELS['svm_model']
+    if selected_model is None or MODELS['vectorizer'] is None:
+        raise HTTPException(status_code=503, detail=f"Model {model.upper()} belum tersedia")
+    
+    try:
+        predictions = []
+        
+        for text in texts:
+            cleaned = preprocess_text(text)
+            
+            if not cleaned.strip():
+                sentiment, confidence, category = 'neutral', 0.0, 'kinerja'
+            else:
+                X = MODELS['vectorizer'].transform([cleaned])
+                prediction = selected_model.predict(X)[0]
+                
+                if model == 'nb':
+                    probabilities = selected_model.predict_proba(X)[0]
+                    confidence = float(max(probabilities))
+                else:
+                    decision = selected_model.decision_function(X)
+                    confidence = float(max(abs(decision[0]))) if hasattr(decision, '__iter__') else float(abs(decision))
+                
+                sentiment_map = {'positif': 'positive', 'negatif': 'negative', 'netral': 'neutral'}
+                sentiment = sentiment_map.get(prediction.lower(), prediction.lower())
+                category = detect_category(cleaned)
+            
+            result = {
+                "text": text,
+                "cleaned_text": cleaned,
+                "sentiment": sentiment,
+                "confidence": round(confidence, 4),
+                "category": category
+            }
+            
+            save_analysis_result(result)
+            predictions.append(result)
+        
+        return {
+            "predictions": predictions,
+            "total_processed": len(predictions),
+            "timestamp": datetime.now().isoformat() + 'Z'
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Batch prediction error: {str(e)}")
+
 # ============= ERROR HANDLERS =============
 
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
-    return {
-        "error": "Endpoint not found",
-        "message": f"Endpoint '{request.url.path}' tidak ditemukan",
-        "available_endpoints": "/docs"
-    }
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "Endpoint not found",
+            "message": f"Endpoint '{request.url.path}' tidak ditemukan",
+            "available_endpoints": "/docs"
+        }
+    )
 
 # Run with: uvicorn api:app --reload --port 8000
 if __name__ == "__main__":
