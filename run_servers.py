@@ -11,8 +11,8 @@ import time
 from threading import Thread
 
 def run_streamlit():
-    """Run Streamlit app on port 8501"""
-    os.environ['STREAMLIT_SERVER_PORT'] = '8501'
+    """Run Streamlit app on port 8503"""
+    os.environ['STREAMLIT_SERVER_PORT'] = '8503'
     os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
     subprocess.run([sys.executable, '-m', 'streamlit', 'run', 'app.py'])
 
@@ -22,7 +22,7 @@ def run_fastapi():
 
 def main():
     print("🚀 Starting Sentiment Analysis Servers...")
-    print("📊 Streamlit App: http://localhost:8501")
+    print("📊 Streamlit App: http://localhost:8503")
     print("🔌 FastAPI Server: http://localhost:8000")
     print("📚 API Documentation: http://localhost:8000/docs")
     print("Press Ctrl+C to stop both servers\n")
