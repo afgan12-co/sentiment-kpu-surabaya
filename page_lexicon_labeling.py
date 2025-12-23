@@ -136,7 +136,7 @@ def show_labeling():
                     if text_wc.strip():
                         wc = WordCloud(width=400, height=300, background_color='white').generate(text_wc)
                         fig_wc, ax_wc = plt.subplots()
-                        ax_wc.imshow(wc, interpolation='bilinear')
+                        ax_wc.imshow(wc.to_array(), interpolation='bilinear')
                         ax_wc.axis("off")
                         st.pyplot(fig_wc)
                     else:
