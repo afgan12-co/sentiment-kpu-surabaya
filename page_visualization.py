@@ -107,7 +107,7 @@ def show_visualization():
                             wc = create_wordcloud([text_combined])
                             if wc:
                                 fig_wc = plt.figure(figsize=(8, 4))
-                                plt.imshow(wc, interpolation='bilinear')
+                                plt.imshow(wc.to_image(), interpolation='bilinear')
                                 plt.axis("off")
                                 plt.title(f"WordCloud {sentiment.capitalize()}")
                                 st.pyplot(fig_wc)
