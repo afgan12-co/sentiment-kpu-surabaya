@@ -3,6 +3,7 @@ import pandas as pd
 import joblib
 import os
 from sklearn.naive_bayes import MultinomialNB
+from datetime import datetime
 
 def show_naive_bayes():
     st.title("🤖 Modul Klasifikasi Naïve Bayes")
@@ -98,6 +99,54 @@ y_pred_nb = model_nb.predict(X_test_tfidf)
                     file_name="model_nb.pkl",
                     mime="application/octet-stream"
                 )
+
+            # ==========================================
+            # AUTO-SAVE RESULTS FOR DASHBOARD
+            # ==========================================
+            try:
+                with st.spinner("Mengupdate data dashboard..."):
+                    # Load full dataset for dashboard population
+                    if 'tfidf_dataset' in st.session_state:
+                         df_full = st.session_state['tfidf_dataset']
+                         
+                         # Ensure we use the vectorizer to transform all data
+                         if 'tfidf_vectorizer' in st.session_state:
+                             vectorizer = st.session_state['tfidf_vectorizer']
+                             X_full = df_full['cleaned_text'].fillna("").values
+                             X_full_tfidf = vectorizer.transform(X_full)
+                             
+                             # Predict all
+                             y_full_pred = model_nb.predict(X_full_tfidf)
+                             
+                             # Get confidence
+                             y_full_proba = model_nb.predict_proba(X_full_tfidf)
+                             confidences = [max(prob) for prob in y_full_proba]
+                             
+                             # Prepare results list
+                             from dashboard_utils import detect_category, save_bulk_analysis_results
+                             
+                             dashboard_results = []
+                             for i, (text, pred, conf) in enumerate(zip(df_full['cleaned_text'], y_full_pred, confidences)):
+                                 # Normalize sentiment
+                                 sentiment_map = {'positif': 'positive', 'negatif': 'negative', 'netral': 'neutral'}
+                                 sentiment = sentiment_map.get(pred.lower(), 'neutral')
+                                 
+                                 dashboard_results.append({
+                                     "id": i + 1,
+                                     "text": text,  # Use cleaned text or original if available
+                                     "cleaned_text": text,
+                                     "sentiment": sentiment,
+                                     "confidence": float(round(conf, 4)),
+                                     "category": detect_category(text),
+                                     "timestamp": datetime.now().isoformat() + 'Z'
+                                 })
+                             
+                             # Save to dashboard JSON
+                             save_bulk_analysis_results(dashboard_results)
+                             st.success(f"✅ Dashboard Statistics berhasil diupdate dengan {len(dashboard_results)} data baru!")
+            except Exception as e:
+                st.warning(f"⚠️ Gagal mengupdate dashboard: {str(e)}")
+
     
     # Show model info if already trained
     if 'nb_model' in st.session_state:

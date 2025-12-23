@@ -2,8 +2,10 @@ import streamlit as st
 import pandas as pd
 import joblib
 import os
+import numpy as np
 from sklearn.svm import LinearSVC
 from imblearn.over_sampling import SMOTE
+from datetime import datetime
 
 def show_svm():
     st.title("⚡ Modul Klasifikasi SVM")
@@ -126,6 +128,59 @@ y_pred_svm = model_svm.predict(X_test_tfidf)
                         file_name="model_svm.pkl",
                         mime="application/octet-stream"
                     )
+
+                # ==========================================
+                # AUTO-SAVE RESULTS FOR DASHBOARD
+                # ==========================================
+                try:
+                    with st.spinner("Mengupdate data dashboard..."):
+                        # Load full dataset for dashboard population
+                        if 'tfidf_dataset' in st.session_state:
+                             df_full = st.session_state['tfidf_dataset']
+                             
+                             # Ensure we use the vectorizer to transform all data
+                             if 'tfidf_vectorizer' in st.session_state:
+                                 vectorizer = st.session_state['tfidf_vectorizer']
+                                 X_full = df_full['cleaned_text'].fillna("").values
+                                 X_full_tfidf = vectorizer.transform(X_full)
+                                 
+                                 # Predict all
+                                 y_full_pred = model_svm.predict(X_full_tfidf)
+                                 
+                                 # Get confidence (using decision function + sigmoid)
+                                 decision = model_svm.decision_function(X_full_tfidf)
+                                 # Handle binary vs multiclass
+                                 if decision.ndim == 1:
+                                     # Binary: dist < 0 class 0, dist > 0 class 1
+                                     confidences = 1 / (1 + np.exp(-np.abs(decision)))
+                                 else:
+                                     # Multiclass: take max score
+                                     confidences = 1 / (1 + np.exp(-np.max(decision, axis=1)))
+                                 
+                                 # Prepare results list
+                                 from dashboard_utils import detect_category, save_bulk_analysis_results
+                                 
+                                 dashboard_results = []
+                                 for i, (text, pred, conf) in enumerate(zip(df_full['cleaned_text'], y_full_pred, confidences)):
+                                     # Normalize sentiment
+                                     sentiment_map = {'positif': 'positive', 'negatif': 'negative', 'netral': 'neutral'}
+                                     sentiment = sentiment_map.get(pred.lower(), 'neutral')
+                                     
+                                     dashboard_results.append({
+                                         "id": i + 1,
+                                         "text": text,
+                                         "cleaned_text": text,
+                                         "sentiment": sentiment,
+                                         "confidence": float(round(conf, 4)),
+                                         "category": detect_category(text),
+                                         "timestamp": datetime.now().isoformat() + 'Z'
+                                     })
+                                 
+                                 # Save to dashboard JSON
+                                 save_bulk_analysis_results(dashboard_results)
+                                 st.success(f"✅ Dashboard Statistics berhasil diupdate dengan {len(dashboard_results)} data baru!")
+                except Exception as e:
+                    st.warning(f"⚠️ Gagal mengupdate dashboard: {str(e)}")
             
             except Exception as e:
                 st.error(f"❌ Error saat training: {e}")

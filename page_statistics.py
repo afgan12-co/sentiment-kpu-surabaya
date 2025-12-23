@@ -1,224 +1,143 @@
 import streamlit as st
 import pandas as pd
-from dashboard_utils import load_analysis_results, aggregate_statistics
-import plotly.graph_objects as go
 import plotly.express as px
+import plotly.graph_objects as go
+from dashboard_utils import load_analysis_results, aggregate_statistics
 from datetime import datetime
 
 def show_statistics():
-    st.title("📊 Dashboard Statistics")
-    
-    st.markdown("""
-    Halaman ini menampilkan statistik hasil analisis sentimen yang sama dengan endpoint API `/statistics`.
-    Data ini dapat diakses oleh aplikasi frontend lain melalui REST API.
-    """)
+    st.title("Admin Dashboard - KPU Kota Surabaya")
+    st.markdown("Ringkasan opini masyarakat terhadap KPU Kota Surabaya pada Pemilu 2024")
     
     # Load data
-    try:
-        results = load_analysis_results()
+    results = load_analysis_results()
+    stats = aggregate_statistics(results)
+    
+    # Check if we have data
+    if not results:
+        st.warning("⚠️ Belum ada data analisis. Silakan jalankan training model Naive Bayes atau SVM terlebih dahulu.")
+    
+    # Since only Dashboard remains, we don't need Tabs anymore.
+    # Just show the Dashboard content directly.
+    
+    st.subheader("Dashboard Analisis Sentimen")
+    
+    # 1. Statistics Cards (Overall)
+    col1, col2, col3 = st.columns(3)
+    sd = stats['sentiment_distribution']
+    
+    with col1:
+        st.container(border=True)
+        st.markdown("**Sentimen Positif**")
+        st.markdown(f"<h2 style='color: #22c55e;'>{sd['positive']}</h2>", unsafe_allow_html=True)
+    
+    with col2:
+        st.container(border=True)
+        st.markdown("**Sentimen Negatif**")
+        st.markdown(f"<h2 style='color: #ef4444;'>{sd['negative']}</h2>", unsafe_allow_html=True)
         
-        if not results:
-            st.warning("⚠️ Belum ada data analisis. Silakan lakukan prediksi terlebih dahulu melalui:")
-            st.info("""
-            - **Menu Klasifikasi Naive Bayes** atau **SVM** untuk training & prediksi
-            - **API Endpoint** `/predict` atau `/predict-batch`
-            """)
-            return
+    with col3:
+        st.container(border=True)
+        st.markdown("**Sentimen Netral**")
+        st.markdown(f"<h2 style='color: #6b7280;'>{sd['neutral']}</h2>", unsafe_allow_html=True)
         
-        # Generate statistics
-        stats = aggregate_statistics(results)
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 2. Charts
+    c_col1, c_col2 = st.columns(2)
+    
+    with c_col1:
+        st.container(border=True)
+        st.markdown("**Distribusi Sentimen Keseluruhan**")
         
-        # ============= HEADER METRICS =============
-        st.markdown("---")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Total Data", stats['total_data'])
-        
-        with col2:
-            positive_pct = (stats['sentiment_distribution']['positive'] / stats['total_data'] * 100) if stats['total_data'] > 0 else 0
-            st.metric("Positive Sentiment", f"{positive_pct:.1f}%")
-        
-        with col3:
-            st.metric("Last Updated", stats['last_updated'].split('T')[0])
-        
-        # ============= OVERALL SENTIMENT DISTRIBUTION =============
-        st.markdown("---")
-        st.subheader("📈 Overall Sentiment Distribution")
-        
-        col_chart1, col_chart2 = st.columns(2)
-        
-        with col_chart1:
-            # Pie Chart
-            sentiment_data = stats['sentiment_distribution']
-            fig_pie = go.Figure(data=[go.Pie(
-                labels=['Positive', 'Negative', 'Neutral'],
-                values=[sentiment_data['positive'], sentiment_data['negative'], sentiment_data['neutral']],
-                marker_colors=['#4CAF50', '#F44336', '#FFC107']
-            )])
-            fig_pie.update_layout(title="Sentiment Distribution", height=300)
+        # Pie Chart
+        if stats['total_data'] > 0:
+            fig_pie = px.pie(
+                values=[sd['positive'], sd['negative'], sd['neutral']],
+                names=['Positif', 'Negatif', 'Netral'],
+                color=['Positif', 'Negatif', 'Netral'],
+                color_discrete_map={
+                    'Positif': '#22c55e',
+                    'Negatif': '#ef4444',
+                    'Netral': '#6b7280'
+                },
+                hole=0.4
+            )
+            fig_pie.update_layout(height=300, margin=dict(t=0, b=0, l=0, r=0))
+            # Fix use_container_width deprecation
             st.plotly_chart(fig_pie, use_container_width=True)
+        else:
+            st.info("No data")
+    
+    with c_col2:
+        st.container(border=True)
+        st.markdown("**Opini Terkini**")
         
-        with col_chart2:
-            # Bar Chart
-            fig_bar = go.Figure(data=[
-                go.Bar(
-                    x=['Positive', 'Negative', 'Neutral'],
-                    y=[sentiment_data['positive'], sentiment_data['negative'], sentiment_data['neutral']],
-                    marker_color=['#4CAF50', '#F44336', '#FFC107']
-                )
-            ])
-            fig_bar.update_layout(title="Sentiment Counts", height=300, yaxis_title="Count")
-            st.plotly_chart(fig_bar, use_container_width=True)
+        # Replaced Category Bar Chart with Recent Data List (Total)
+        # Since we removed categories, showing recent data here makes sense for "Dashboard" view
         
-        # ============= CATEGORY BREAKDOWN =============
-        st.markdown("---")
-        st.subheader("🏷️ Breakdown by Category")
+        # Extract all recent data from all categories or raw results
+        # To be clean, let's take the latest 5 from 'results' directly
         
-        # Category tabs
-        tab1, tab2, tab3 = st.tabs(["📋 Kinerja", "⚖️ Netralitas", "📜 Kebijakan"])
+        recent_all = sorted(results, key=lambda x: x.get('timestamp', ''), reverse=True)[:5]
         
-        for tab, category in zip([tab1, tab2, tab3], ['kinerja', 'netralitas', 'kebijakan']):
-            with tab:
-                cat_data = stats['categories'][category]
+        if recent_all:
+            # Create a scrolling container or just list them
+             for item in recent_all:
+                sent = item.get('sentiment', 'neutral').title()
+                # Normalize sentiment string if needed (e.g. 'positif' -> 'Positif')
+                if sent.lower() == 'positif': 
+                     sent = 'Positif'
+                     color = '#22c55e'
+                     icon = "📈"
+                elif sent.lower() == 'negatif': 
+                     sent = 'Negatif'
+                     color = '#ef4444'
+                     icon = "📉"
+                else: 
+                     sent = 'Netral' 
+                     color = '#6b7280'
+                     icon = "➖"
+                     
+                text = item.get('text', '') or item.get('cleaned_text', '')
                 
-                # Category metrics
-                col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-                with col_m1:
-                    st.metric("Total", cat_data['total'])
-                with col_m2:
-                    st.metric("Positive", cat_data['positive'], delta=None, delta_color="normal")
-                with col_m3:
-                    st.metric("Negative", cat_data['negative'], delta=None, delta_color="inverse")
-                with col_m4:
-                    st.metric("Neutral", cat_data['neutral'])
+                # Simplified list item
+                st.markdown(f"""
+                <div style="margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:bold; font-size:14px;">{icon} {sent}</span>
+                        <span style="color:gray; font-size:10px;">{item.get('timestamp', '')[:10]}</span>
+                    </div>
+                    <div style="font-size:12px; color:#333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        {text[:50]}...
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("Belum ada data opini terkini")
+
+    # 3. Summary Section
+    st.markdown("<br>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.subheader("ℹ️ Ringkasan Analisis")
+        
+        s_col1, s_col2 = st.columns(2)
+        with s_col1:
+            st.markdown("**Total Data Dianalisis**")
+            st.markdown(f"<h3 style='color: #3b82f6;'>{stats['total_data']}</h3>", unsafe_allow_html=True)
+            st.caption(f"Terakhir diupdate: {stats['last_updated'][:16].replace('T', ' ')}")
+            
+        with s_col2:
+            st.markdown("**Dominasi Sentimen**")
+            # Determine dominant sentiment
+            if stats['total_data'] > 0:
+                dominant = max(sd, key=sd.get)
+                dom_count = sd[dominant]
+                dom_pct = (dom_count / stats['total_data']) * 100
                 
-                if cat_data['total'] > 0:
-                    # Sentiment trend
-                    if cat_data['sentiment_trend']:
-                        st.markdown("**📊 Sentiment Trend**")
-                        trend_df = pd.DataFrame(cat_data['sentiment_trend'])
-                        
-                        fig_trend = go.Figure()
-                        fig_trend.add_trace(go.Scatter(
-                            x=trend_df['date'], y=trend_df['positive'],
-                            name='Positive', line=dict(color='#4CAF50'), mode='lines+markers'
-                        ))
-                        fig_trend.add_trace(go.Scatter(
-                            x=trend_df['date'], y=trend_df['negative'],
-                            name='Negative', line=dict(color='#F44336'), mode='lines+markers'
-                        ))
-                        fig_trend.add_trace(go.Scatter(
-                            x=trend_df['date'], y=trend_df['neutral'],
-                            name='Neutral', line=dict(color='#FFC107'), mode='lines+markers'
-                        ))
-                        fig_trend.update_layout(
-                            height=300,
-                            xaxis_title="Date",
-                            yaxis_title="Count",
-                            hovermode='x unified'
-                        )
-                        st.plotly_chart(fig_trend, use_container_width=True)
-                    
-                    # Top keywords
-                    if cat_data['top_keywords']:
-                        st.markdown("**🔤 Top Keywords**")
-                        keywords_df = pd.DataFrame(cat_data['top_keywords'])
-                        
-                        fig_keywords = go.Figure(data=[
-                            go.Bar(
-                                x=keywords_df['count'][:10],
-                                y=keywords_df['word'][:10],
-                                orientation='h',
-                                marker_color='#2196F3'
-                            )
-                        ])
-                        fig_keywords.update_layout(
-                            height=300,
-                            xaxis_title="Frequency",
-                            yaxis_title="",
-                            yaxis={'categoryorder': 'total ascending'}
-                        )
-                        st.plotly_chart(fig_keywords, use_container_width=True)
-                    
-                    # Recent data
-                    if cat_data['recent_data']:
-                        st.markdown("**📝 Recent Data**")
-                        recent_df = pd.DataFrame(cat_data['recent_data'])
-                        recent_df = recent_df[['id', 'text', 'sentiment', 'confidence', 'timestamp']]
-                        st.dataframe(recent_df, use_container_width=True, hide_index=True)
-                else:
-                    st.info(f"Belum ada data untuk kategori **{category.title()}**")
-        
-        # ============= RAW DATA TABLE =============
-        st.markdown("---")
-        st.subheader("📋 All Analysis Results")
-        
-        # Convert to DataFrame
-        df_results = pd.DataFrame(results)
-        
-        # Display filters
-        col_f1, col_f2 = st.columns(2)
-        
-        with col_f1:
-            sentiment_filter = st.multiselect(
-                "Filter by Sentiment",
-                options=['positive', 'negative', 'neutral', 'positif', 'negatif', 'netral'],
-                default=None
-            )
-        
-        with col_f2:
-            category_filter = st.multiselect(
-                "Filter by Category",
-                options=['kinerja', 'netralitas', 'kebijakan'],
-                default=None
-            )
-        
-        # Apply filters
-        filtered_df = df_results.copy()
-        if sentiment_filter:
-            filtered_df = filtered_df[filtered_df['sentiment'].isin(sentiment_filter)]
-        if category_filter:
-            filtered_df = filtered_df[filtered_df['category'].isin(category_filter)]
-        
-        # Display table
-        st.write(f"Showing {len(filtered_df)} of {len(df_results)} results")
-        
-        display_cols = ['id', 'text', 'sentiment', 'category', 'confidence', 'timestamp']
-        available_cols = [col for col in display_cols if col in filtered_df.columns]
-        
-        st.dataframe(
-            filtered_df[available_cols].sort_values('id', ascending=False),
-            use_container_width=True,
-            hide_index=True
-        )
-        
-        # ============= API ENDPOINT INFO =============
-        st.markdown("---")
-        st.subheader("🔌 API Endpoint")
-        
-        st.info("""
-        **Data statistics ini juga tersedia melalui REST API:**
-        
-        ```
-        GET http://localhost:8000/statistics
-        ```
-        
-        Frontend aplikasi lain dapat mengakses endpoint ini untuk mendapatkan data dashboard secara real-time.
-        
-        Dokumentasi lengkap: http://localhost:8000/docs
-        """)
-        
-        # Download button
-        st.markdown("---")
-        csv = df_results.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download All Data (CSV)",
-            data=csv,
-            file_name=f"sentiment_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv"
-        )
-        
-    except Exception as e:
-        st.error(f"❌ Error loading statistics: {str(e)}")
-        st.exception(e)
+                color_map = {'positive': '#22c55e', 'negative': '#ef4444', 'neutral': '#6b7280'}
+                dom_label = {'positive': 'Positif', 'negative': 'Negatif', 'neutral': 'Netral'}
+                
+                st.markdown(f"<h3 style='color: {color_map.get(dominant, 'black')};'>{dom_label.get(dominant, dominant).title()} ({dom_pct:.1f}%)</h3>", unsafe_allow_html=True)
+            else:
+                 st.markdown("-")

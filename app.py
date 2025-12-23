@@ -44,7 +44,7 @@ else:
         "Klasifikasi SVM",
         "Evaluasi Model",
         "Visualisasi Hasil",
-        "Dashboard Statistics",
+        # "Dashboard Statistics",
         "Logout"
     ])
     

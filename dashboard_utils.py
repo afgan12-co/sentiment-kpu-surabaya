@@ -106,6 +106,30 @@ def save_analysis_result(data: Dict) -> None:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
 
+def save_bulk_analysis_results(results_list: List[Dict]) -> None:
+    """
+    Save multiple analysis results to JSON storage (Overwrite mode)
+    Used when retraining models to refresh the dashboard data.
+    
+    Args:
+        results_list: List of dict containing analysis results
+    """
+    ensure_dashboard_dir()
+    filepath = 'data/dashboard/results.json'
+    
+    # Add IDs and timestamps if missing
+    current_time = datetime.now().isoformat() + 'Z'
+    for i, data in enumerate(results_list, 1):
+        if 'id' not in data:
+            data['id'] = i
+        if 'timestamp' not in data:
+            data['timestamp'] = current_time
+            
+    # Overwrite file
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(results_list, f, ensure_ascii=False, indent=2)
+
+
 def load_analysis_results() -> List[Dict]:
     """
     Load all analysis results from JSON storage
