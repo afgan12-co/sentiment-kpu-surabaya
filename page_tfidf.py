@@ -4,6 +4,7 @@ import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 import numpy as np
+import joblib
 
 def show_tfidf():
     st.title("📊 Pembobotan Kata TF-IDF")
@@ -120,7 +121,12 @@ def show_tfidf():
                 st.session_state['y_test'] = y_test
                 st.session_state['tfidf_vectorizer'] = vectorizer
                 st.session_state['feature_names'] = vectorizer.get_feature_names_out()
-                
+
+                # Save vectorizer for API usage
+                os.makedirs("models", exist_ok=True)
+                joblib.dump(vectorizer, "models/tfidf_vectorizer.pkl")
+                st.info("💾 TF-IDF Vectorizer disimpan untuk API usage")
+
                 st.success("✅ TF-IDF Matrix berhasil dibuat!")
                 
                 # Show info
