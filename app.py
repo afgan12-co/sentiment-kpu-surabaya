@@ -9,6 +9,7 @@ from page_naive_bayes import show_naive_bayes
 from page_svm import show_svm
 from page_evaluation import show_evaluation
 from page_visualization import show_visualization
+from page_statistics import show_statistics
 import os
 
 # Create data directories
@@ -43,6 +44,7 @@ else:
         "Klasifikasi SVM",
         "Evaluasi Model",
         "Visualisasi Hasil",
+        "Dashboard Statistics",
         "Logout"
     ])
     
@@ -62,6 +64,8 @@ else:
         show_evaluation()
     elif menu == "Visualisasi Hasil":
         show_visualization()
+    elif menu == "Dashboard Statistics":
+        show_statistics()
     elif menu == "Logout":
         st.session_state['is_logged_in'] = False
         st.rerun()
