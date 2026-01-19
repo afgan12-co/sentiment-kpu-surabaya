@@ -1,44 +1,13 @@
 """
 Utility functions for text preprocessing and sentiment labeling
+UPDATED: Now uses scr.preprocess pipeline
 """
-import re
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+import streamlit as st
+from src.preprocess import preprocess_pipeline
+from src.lexicon_loader import load_lexicons
 
-# Download required NLTK data
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', quiet=True)
-
-try:
-    nltk.data.find('tokenizers/punkt_tab')
-except LookupError:
-    nltk.download('punkt_tab', quiet=True)
-
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords', quiet=True)
-
-# Initialize stemmer
-factory = StemmerFactory()
-stemmer = factory.create_stemmer()
-
-# Slang dictionary for normalization
-SLANG_DICT = {
-    'jgn': 'jangan', 'lg': 'lagi', 'udah': 'sudah', 'gak': 'tidak',
-    'gaada': 'tidak ada', 'org': 'orang', 'pd': 'pada', 'bgt': 'banget',
-    'yg': 'yang', 'gk': 'tidak', 'skrg': 'sekarang', 'dpt': 'dapat',
-    'trs': 'terus', 'utk': 'untuk', 'jd': 'jadi', 'klo': 'kalau',
-    'dr': 'dari', 'dlm': 'dalam', 'bkn': 'bukan', 'sy': 'saya',
-    'gue': 'saya', 'lo': 'kamu', 'aja': 'saja', 'emang': 'memang',
-    'banget': 'sangat', 'gimana': 'bagaimana', 'kenapa': 'mengapa'
-}
-
-# Lexicon dictionaries for sentiment scoring
+# Lexicon dictionaries for sentiment scoring (kept here for labeling compatibility)
+# These are small enough to keep defined here, or could be moved to json
 LEXICON_POSITIVE = {
     'bagus': 5, 'hebat': 4, 'suka': 3, 'mantap': 4, 'senang': 3,
     'baik': 3, 'puas': 4, 'keren': 5, 'cinta': 5, 'sayang': 5,
@@ -54,21 +23,10 @@ LEXICON_NEGATIVE = {
     'gila': -3, 'hancur': -5, 'mengerikan': -5, 'jahat': -5, 'bohong': -4
 }
 
-# Indonesian stopwords
-STOPWORDS = set(stopwords.words('indonesian'))
-
-
 def preprocess_text(text):
     """
-    Complete text preprocessing pipeline.
-    
-    Steps:
-    1. Case folding (lowercase)
-    2. Cleaning (remove URLs, mentions, hashtags, special chars)
-    3. Tokenization
-    4. Normalization (slang replacement)
-    5. Stopwords removal
-    6. Stemming
+    Legacy wrapper for preprocess_pipeline.
+    Uses default settings (English removal ON, Stopwords ON, Stemming ON).
     
     Args:
         text (str): Raw text input
@@ -76,42 +34,13 @@ def preprocess_text(text):
     Returns:
         str: Cleaned and processed text
     """
-    if not isinstance(text, str) or not text.strip():
-        return ""
-    
-    # Step 1: Case folding
-    text = text.lower()
-    
-    # Step 2: Cleaning
-    # Remove URLs
-    text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
-    # Remove mentions
-    text = re.sub(r'@\w+', '', text)
-    # Remove hashtags
-    text = re.sub(r'#\w+', '', text)
-    # Remove special characters (keep only letters, numbers, and basic punctuation)
-    text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
-    # Remove extra spaces
-    text = re.sub(r'\s+', ' ', text).strip()
-    
-    if not text:
-        return ""
-    
-    # Step 3: Tokenization
-    tokens = word_tokenize(text)
-    
-    # Step 4: Normalization (slang replacement)
-    tokens = [SLANG_DICT.get(token, token) for token in tokens]
-    
-    # Step 5: Stopwords removal
-    tokens = [token for token in tokens if token not in STOPWORDS and len(token) > 1]
-    
-    # Step 6: Stemming
-    tokens = [stemmer.stem(token) for token in tokens]
-    
-    # Join back to string
-    cleaned_text = ' '.join(tokens)
-    
+    # Use the new pipeline
+    cleaned_text, _ = preprocess_pipeline(text, config={
+        'remove_english': True,
+        'remove_stopwords': True,
+        'apply_stemming': True,
+        'normalize_slang': True
+    })
     return cleaned_text
 
 

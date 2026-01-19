@@ -1,69 +1,74 @@
 import streamlit as st
 import json
 import os
-import random
+from datetime import datetime
 
-def save_user(name, username, email, password):
-    if not os.path.exists('users.json'):
-        users = {}
-    else:
-        with open('users.json', 'r') as f:
+
+def load_users():
+    """Load users from users.json"""
+    users_file = 'users.json'
+    if os.path.exists(users_file):
+        with open(users_file, 'r') as f:
             try:
-                users = json.load(f)
-            except json.JSONDecodeError:
-                users = {}
-                
-    if username in users:
-        return False, "Username already exists"
-        
-    users[username] = {
-        "name": name,
-        "email": email,
-        "password": password
-    }
-    
+                return json.load(f)
+            except:
+                return {}
+    return {}
+
+
+def save_users(users):
+    """Save users to users.json"""
     with open('users.json', 'w') as f:
-        json.dump(users, f, indent=4)
-        
-    return True, "Registration successful"
+        json.dump(users, f, indent=2)
+
 
 def show_register():
-    st.title("Registrasi Akun")
+    """Simple registration - username and password only"""
+    st.title("📝 Registrasi Akun Baru")
     
-    name = st.text_input("Nama Lengkap")
-    username = st.text_input("Username")
-    email = st.text_input("Gmail (untuk OTP)")
-    password = st.text_input("Password (min 5 karakter)", type="password")
+    st.markdown("""
+    Daftarkan akun Anda untuk menggunakan aplikasi analisis sentimen NLP.
+    Setelah registrasi berhasil, Anda dapat langsung login.
+    """)
     
-    # OTP Simulation
-    if 'otp_sent' not in st.session_state:
-        st.session_state['otp_sent'] = False
-        st.session_state['generated_otp'] = None
+    with st.form("registration_form"):
+        username = st.text_input("🔑 Username", placeholder="Masukkan username Anda")
+        password = st.text_input("🔒 Password", type="password", placeholder="Min. 6 karakter")
+        password_confirm = st.text_input("🔒 Konfirmasi Password", type="password", placeholder="Ulangi password")
         
-    if st.button("Kirim OTP"):
-        if not email:
-            st.error("Masukkan email terlebih dahulu.")
-        else:
-            otp = str(random.randint(1000, 9999))
-            st.session_state['generated_otp'] = otp
-            st.session_state['otp_sent'] = True
-            # Simulate sending email by showing it
-            st.info(f"[SIMULASI] Kode OTP Anda dikirim ke {email}: **{otp}**")
-            
-    if st.session_state['otp_sent']:
-        otp_input = st.text_input("Masukkan Kode OTP")
+        submitted = st.form_submit_button("✅ Daftar Sekarang", type="primary", width='stretch')
         
-        if st.button("Verifikasi & Daftar"):
-            if len(password) < 5:
-                st.error("Password minimal 5 karakter")
-            elif otp_input == st.session_state['generated_otp']:
-                success, msg = save_user(name, username, email, password)
-                if success:
-                    st.success("Registrasi berhasil! Silakan login.")
-                    # Reset
-                    st.session_state['otp_sent'] = False
-                    st.session_state['generated_otp'] = None
-                else:
-                    st.error(msg)
+        if submitted:
+            # Validate inputs
+            if not username or not password:
+                st.error("❌ Username dan password harus diisi!")
+            elif len(username) < 3:
+                st.error("❌ Username minimal 3 karakter!")
+            elif len(password) < 6:
+                st.error("❌ Password minimal 6 karakter!")
+            elif password != password_confirm:
+                st.error("❌ Password dan konfirmasi tidak cocok!")
             else:
-                st.error("Kode OTP salah")
+                # Check if user exists
+                users = load_users()
+                if username in users:
+                    st.error("❌ Username sudah terdaftar!")
+                else:
+                    # Register user (no email, no verification)
+                    users[username] = {
+                        'password': password,
+                        'created_at': datetime.now().isoformat()
+                    }
+                    save_users(users)
+                    
+                    st.success("✅ Registrasi berhasil! Silakan login.")
+                    st.balloons()
+                    
+                    st.markdown("---")
+                    st.info("⏩ **Lanjutkan ke halaman Login** untuk masuk ke aplikasi.")
+    
+    st.markdown("---")
+    st.info("💡 **Sudah punya akun?** Silakan login di halaman Login.")
+
+
+

@@ -9,7 +9,6 @@ from page_naive_bayes import show_naive_bayes
 from page_svm import show_svm
 from page_evaluation import show_evaluation
 from page_visualization import show_visualization
-from page_statistics import show_statistics
 import os
 
 # Create data directories
@@ -23,6 +22,11 @@ st.set_page_config(page_title="Sistem Analisis Sentimen", page_icon="📊", layo
 # Session State Initialization
 if 'is_logged_in' not in st.session_state:
     st.session_state['is_logged_in'] = False
+
+# Sidebar Header with Logo
+st.sidebar.image("assets/official_kpu_logo.png", width='stretch')
+st.sidebar.markdown("<h2 style='text-align: center; color: #ffcc00; margin-top: -10px;'>KPU KOTA SURABAYA</h2>", unsafe_allow_html=True)
+st.sidebar.markdown("---")
 
 # Sidebar Navigation Logic
 if not st.session_state['is_logged_in']:
@@ -44,7 +48,6 @@ else:
         "Klasifikasi SVM",
         "Evaluasi Model",
         "Visualisasi Hasil",
-        # "Dashboard Statistics",
         "Logout"
     ])
     
@@ -64,8 +67,6 @@ else:
         show_evaluation()
     elif menu == "Visualisasi Hasil":
         show_visualization()
-    elif menu == "Dashboard Statistics":
-        show_statistics()
     elif menu == "Logout":
         st.session_state['is_logged_in'] = False
         st.rerun()

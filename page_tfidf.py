@@ -60,21 +60,37 @@ def show_tfidf():
     if st.button("📥 Load Dataset"):
         df = pd.read_csv(os.path.join(labeled_dir, selected_file))
         
+        # Determine which column to use for text
+        # Prioritize 'text_final' from new pipeline
+        text_col = None
+        if 'text_final' in df.columns:
+            text_col = 'text_final'
+            st.success("✅ Terdeteksi kolom `text_final` (New Pipeline)")
+        elif 'cleaned_text' in df.columns:
+            text_col = 'cleaned_text'
+            st.warning("⚠️ Kolom `text_final` tidak ditemukan. Menggunakan `cleaned_text` (Legacy).")
         # Validate columns
-        if 'cleaned_text' not in df.columns or 'label' not in df.columns:
-            st.error("❌ Dataset harus memiliki kolom 'cleaned_text' dan 'label'")
-            st.warning("Pastikan file ini hasil dari Lexicon Labeling")
+        if text_col is None:
+            st.error("❌ Dataset harus memiliki kolom teks (`text_final` atau `cleaned_text`)")
+            st.warning("⚠️ Untuk hasil terbaik (bebas Bahasa Inggris), silakan jalankan ulang di halaman **Text Processing**.")
+            return
+        
+        if 'label' not in df.columns:
+            st.error("❌ Kolom `label` tidak ditemukan!")
+            st.info("💡 Pastikan Anda sudah memberikan label pada dataset di halaman **Lexicon Labeling**.")
             return
         
         st.session_state['tfidf_dataset'] = df
+        st.session_state['tfidf_text_col'] = text_col
         st.session_state['tfidf_source_file'] = selected_file
-        st.success(f"✅ Dataset loaded: {len(df)} baris")
+        st.success(f"✅ Berhasil memuat {len(df)} baris data.")
     
     if 'tfidf_dataset' in st.session_state:
         df = st.session_state['tfidf_dataset']
+        text_col = st.session_state.get('tfidf_text_col', 'cleaned_text')
         
         st.subheader("Preview Dataset:")
-        st.dataframe(df[['cleaned_text', 'label']].head())
+        st.dataframe(df[[text_col, 'label']].head())
         
         # Show label distribution
         st.write("**Distribusi Label:**")
@@ -95,8 +111,8 @@ def show_tfidf():
         if st.button("🚀 Buat TF-IDF Matrix & Split Data", type="primary"):
             with st.spinner("Membuat TF-IDF matrix..."):
                 # Prepare X and y
-                X = df['cleaned_text'].fillna("").values
-                y = df['label'].values
+                X = df[text_col].fillna("").astype(str).values
+                y = df['label'].astype(str).values
                 
                 # Train-test split
                 X_train, X_test, y_train, y_test = train_test_split(
