@@ -1,4 +1,13 @@
 import streamlit as st
+import nltk
+
+# Download NLTK resources for deployment (Streamlit Cloud)
+try:
+    nltk.download('punkt')
+    nltk.download('punkt_tab')
+except Exception as e:
+    st.error(f"Error downloading NLTK resources: {e}")
+
 from page_login import show_login
 from page_register import show_register
 from page_home import show_home
