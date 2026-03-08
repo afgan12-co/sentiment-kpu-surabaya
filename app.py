@@ -28,13 +28,31 @@ os.makedirs("results", exist_ok=True)
 
 st.set_page_config(page_title="Sistem Analisis Sentimen", page_icon="📊", layout="wide")
 
+st.markdown(
+    """
+    <style>
+    [data-testid="stSidebar"] .stImage img {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Session State Initialization
 if 'is_logged_in' not in st.session_state:
     st.session_state['is_logged_in'] = False
 
-# Sidebar Header with Logo
-st.sidebar.image("assets/kpu_logo_fix.png", use_container_width=True)
-st.sidebar.markdown("<h2 style='text-align: center; color: #ffcc00; margin-top: -10px;'>KPU KOTA SURABAYA</h2>", unsafe_allow_html=True)
+# Sidebar Header with Logo (menggunakan foto logo/maskot KPU terbaru dari aset lokal)
+logo_container = st.sidebar.container()
+with logo_container:
+    st.image("assets/kpu_logo_fix.png", use_container_width=True)
+    st.markdown(
+        "<h2 style='text-align: center; color: #ffcc00; margin-top: -2px; font-size: 1.05rem;'>KPU KOTA SURABAYA</h2>",
+        unsafe_allow_html=True,
+    )
 st.sidebar.markdown("---")
 
 # Sidebar Navigation Logic

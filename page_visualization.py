@@ -2,11 +2,13 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 from wordcloud import WordCloud
-import pandas as pd
-from sklearn.metrics import confusion_matrix, accuracy_score
-from src.preprocess import EnglishDetector
-from src.lexicon_loader import load_lexicons
-from src.pipeline import validate_no_english_leakage
+from sklearn.metrics import confusion_matrix
+from src.result_interpretation import (
+    build_comparison_dataframe,
+    compute_model_metrics,
+    render_model_comparison_interpretation,
+    render_sentiment_meaning_section,
+)
 
 def create_wordcloud(text_list):
     """Create WordCloud from list of texts"""
@@ -63,8 +65,10 @@ def show_visualization():
     st.markdown("---")
     st.markdown("## 🏆 Perbandingan Akurasi Model")
     
-    nb_acc = accuracy_score(df_nb["true"], df_nb["pred"])
-    svm_acc = accuracy_score(df_svm["true"], df_svm["pred"])
+    nb_metrics = compute_model_metrics(df_nb)
+    svm_metrics = compute_model_metrics(df_svm)
+    nb_acc = nb_metrics["accuracy"]
+    svm_acc = svm_metrics["accuracy"]
     
     fig3, ax3 = plt.subplots(figsize=(8, 4))
     models = ["Naïve Bayes", "SVM"]
@@ -85,6 +89,22 @@ def show_visualization():
     
     st.pyplot(fig3)
     st.caption("Perbandingan tingkat akurasi antara Naive Bayes dan SVM")
+
+    comparison_df = build_comparison_dataframe(nb_metrics, svm_metrics)
+    st.markdown("### 📋 Ringkasan Metrik Evaluasi")
+    st.dataframe(
+        comparison_df.style.format(
+            {
+                "Accuracy": "{:.4f}",
+                "Precision": "{:.4f}",
+                "Recall": "{:.4f}",
+                "F1-Score": "{:.4f}",
+            }
+        ).highlight_max(axis=0, subset=["Accuracy", "Precision", "Recall", "F1-Score"]),
+        use_container_width=True,
+    )
+
+    render_model_comparison_interpretation(nb_metrics, svm_metrics)
 
     # 3. WordClouds per Sentiment - CRITICAL: Use text_final
     st.markdown("---")
@@ -266,3 +286,7 @@ def show_visualization():
         ax_cm2.set_title("Confusion Matrix - SVM")
         st.pyplot(fig_cm2)
         st.caption("Matriks konfusi SVM menunjukkan perbandingan prediksi vs aktual")
+
+    st.markdown("---")
+    st.subheader("🧾 Kesimpulan Akhir Hasil Klasifikasi")
+    render_sentiment_meaning_section()
