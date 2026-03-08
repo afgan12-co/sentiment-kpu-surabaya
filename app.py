@@ -35,6 +35,16 @@ st.markdown(
         display: block;
         margin-left: auto;
         margin-right: auto;
+        border-radius: 50%;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #1a1a2e;
+    }
+    [data-testid="stSidebar"] * {
+        color: #f0f0f0 !important;
+    }
+    [data-testid="stSidebar"] .stRadio label {
+        font-size: 0.95rem;
     }
     </style>
     """,
@@ -45,12 +55,17 @@ st.markdown(
 if 'is_logged_in' not in st.session_state:
     st.session_state['is_logged_in'] = False
 
-# Sidebar Header with Logo (menggunakan foto logo/maskot KPU terbaru dari aset lokal)
-logo_container = st.sidebar.container()
-with logo_container:
-    st.image("assets/kpu_logo_fix.png", use_container_width=True)
+# Sidebar Header with Logo - proporsional dengan lebar tetap
+with st.sidebar:
+    col_pad1, col_logo, col_pad2 = st.columns([1, 3, 1])
+    with col_logo:
+        st.image("assets/kpu_logo_fix.png", width=130)
     st.markdown(
-        "<h2 style='text-align: center; color: #ffcc00; margin-top: -2px; font-size: 1.05rem;'>KPU KOTA SURABAYA</h2>",
+        "<h2 style='text-align: center; color: #ffcc00; margin-top: 4px; margin-bottom: 0px; font-size: 1rem; font-weight: bold;'>KPU KOTA SURABAYA</h2>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='text-align: center; color: #aaaaaa; font-size: 0.78rem; margin-top: 2px;'>Sistem Analisis Sentimen Pemilu 2024</p>",
         unsafe_allow_html=True,
     )
 st.sidebar.markdown("---")
