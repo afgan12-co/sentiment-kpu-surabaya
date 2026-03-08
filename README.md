@@ -127,6 +127,44 @@ Aplikasi menggunakan:
 
 ## 🚀 **Deployment**
 
+## 🧪 Testing Live Server Sebelum Deploy
+
+Gunakan alur ini agar sistem bisa diuji seperti kondisi live sebelum deployment final.
+
+### 1) Jalankan server aplikasi
+
+```bash
+python run_servers.py
+```
+
+Output default:
+- Streamlit: `http://localhost:8503`
+- API: `http://localhost:8000`
+- Swagger: `http://localhost:8000/docs`
+
+### 2) Jalankan smoke test otomatis (langsung cek live sekarang)
+
+Di terminal terpisah:
+
+```bash
+python scripts/live_smoke_test.py
+```
+
+Jika berhasil, akan muncul status:
+- ✅ Streamlit OK
+- ✅ API health OK
+
+Jika Anda hanya ingin cek UI Streamlit saja (tanpa API), gunakan:
+
+```bash
+python scripts/live_smoke_test.py --streamlit-only
+```
+
+> Catatan: jika muncul error `No module named uvicorn`, install dependensi API dulu:
+> `pip install uvicorn fastapi`
+
+Fokus pengujian ini adalah validasi langsung di mesin saat ini sebelum deploy.
+
 ### **Streamlit Cloud:**
 1. Connect GitHub repository
 2. Deploy otomatis dari branch `main`
