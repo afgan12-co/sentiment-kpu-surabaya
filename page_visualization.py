@@ -6,8 +6,7 @@ from sklearn.metrics import confusion_matrix
 from src.result_interpretation import (
     build_comparison_dataframe,
     compute_model_metrics,
-    render_model_comparison_interpretation,
-    render_sentiment_meaning_section,
+    render_final_conclusion,
 )
 
 
@@ -144,8 +143,6 @@ def show_visualization():
         use_container_width=True,
     )
     st.caption("Sel yang disorot hijau menunjukkan model dengan nilai tertinggi pada metrik tersebut.")
-
-    render_model_comparison_interpretation(nb_metrics, svm_metrics)
 
     # ── 3. WordClouds ─────────────────────────────────────────────────────────
     st.markdown("---")
@@ -300,5 +297,12 @@ def show_visualization():
         st.caption("Confusion Matrix SVM — prediksi vs label aktual.")
 
     # ── 5. Final Conclusion ───────────────────────────────────────────────────
-    st.markdown("---")
-    render_sentiment_meaning_section()
+    # Gunakan model terbaik berdasarkan F1-Score untuk kesimpulan akhir
+    if svm_metrics["f1"] >= nb_metrics["f1"]:
+        best_pred_df   = df_svm
+        best_model_name = "Support Vector Machine (SVM)"
+    else:
+        best_pred_df   = df_nb
+        best_model_name = "Naïve Bayes"
+
+    render_final_conclusion(best_pred_df, best_model_name)

@@ -7,7 +7,6 @@ from src.result_interpretation import (
     build_comparison_dataframe,
     compute_model_metrics,
     render_model_comparison_interpretation,
-    render_sentiment_meaning_section,
 )
 
 
@@ -140,10 +139,6 @@ def show_evaluation():
     )
 
     render_model_comparison_interpretation(nb_metrics, svm_metrics)
-
-    # ── Sentiment Meaning ────────────────────────────────────────────────────
-    st.markdown("---")
-    render_sentiment_meaning_section()
 
     # ── Export ───────────────────────────────────────────────────────────────
     st.markdown("---")
