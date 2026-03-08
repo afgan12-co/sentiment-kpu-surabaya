@@ -1,8 +1,14 @@
 import streamlit as st
 import pandas as pd
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import classification_report, confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
+from src.result_interpretation import (
+    build_comparison_dataframe,
+    compute_model_metrics,
+    render_model_comparison_interpretation,
+    render_sentiment_meaning_section,
+)
 
 def show_evaluation():
     st.title("📈 Modul Evaluasi Model")
@@ -15,10 +21,11 @@ def show_evaluation():
     st.markdown("## 🔵 Evaluasi Naïve Bayes")
     nb = st.session_state["nb_pred"]
     
-    nb_acc = accuracy_score(nb["true"], nb["pred"])
-    nb_prec = precision_score(nb["true"], nb["pred"], average='macro', zero_division=0)
-    nb_rec = recall_score(nb["true"], nb["pred"], average='macro', zero_division=0)
-    nb_f1 = f1_score(nb["true"], nb["pred"], average='macro', zero_division=0)
+    nb_metrics = compute_model_metrics(nb)
+    nb_acc = nb_metrics["accuracy"]
+    nb_prec = nb_metrics["precision"]
+    nb_rec = nb_metrics["recall"]
+    nb_f1 = nb_metrics["f1"]
     
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Accuracy", f"{nb_acc:.4f}")
@@ -44,10 +51,11 @@ def show_evaluation():
     st.markdown("## 🟢 Evaluasi SVM")
     svm = st.session_state["svm_pred"]
     
-    svm_acc = accuracy_score(svm["true"], svm["pred"])
-    svm_prec = precision_score(svm["true"], svm["pred"], average='macro', zero_division=0)
-    svm_rec = recall_score(svm["true"], svm["pred"], average='macro', zero_division=0)
-    svm_f1 = f1_score(svm["true"], svm["pred"], average='macro', zero_division=0)
+    svm_metrics = compute_model_metrics(svm)
+    svm_acc = svm_metrics["accuracy"]
+    svm_prec = svm_metrics["precision"]
+    svm_rec = svm_metrics["recall"]
+    svm_f1 = svm_metrics["f1"]
     
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Accuracy", f"{svm_acc:.4f}")
@@ -72,25 +80,16 @@ def show_evaluation():
     st.markdown("---")
     st.markdown("## 🏆 Perbandingan Model")
     
-    comparison = pd.DataFrame({
-        "Model": ["Naïve Bayes", "SVM"],
-        "Accuracy": [nb_acc, svm_acc],
-        "Precision": [nb_prec, svm_prec],
-        "Recall": [nb_rec, svm_rec],
-        "F1-Score": [nb_f1, svm_f1]
-    })
+    comparison = build_comparison_dataframe(nb_metrics, svm_metrics)
     
     st.dataframe(comparison.style.highlight_max(axis=0, subset=['Accuracy', 'Precision', 'Recall', 'F1-Score']))
 
     # Interpretation
-    st.subheader("📖 Interpretasi")
-    best_model = "SVM" if svm_acc > nb_acc else "Naïve Bayes"
-    st.info(f"""
-    Model **{best_model}** memiliki performa lebih baik dengan akurasi **{max(nb_acc, svm_acc):.4f}**.
-    
-    - Jika SVM lebih unggul: Kemungkinan karena kemampuannya menangani data berdimensi tinggi dan penggunaan SMOTE untuk mengatasi ketidakseimbangan kelas.
-    - Jika NB lebih unggul: Kemungkinan karena dataset relatif sederhana dan asumsi independensi fitur cukup terpenuhi.
-    """)
+    render_model_comparison_interpretation(nb_metrics, svm_metrics)
+
+    st.markdown("---")
+    st.subheader("🧾 Kesimpulan Akhir Hasil Klasifikasi")
+    render_sentiment_meaning_section()
 
     # Export
     st.markdown("---")
